@@ -18,5 +18,31 @@ static void IRAM_ATTR gpio4_isr_handler(void *params) // cria a função de inte
 {
 	int pino = (int)params; //converte o ponteiro do parametro para inteiro e atribuia var. pino (será o numero do GPIO acionada na ISR)
 	xQueueSendFromISR(interruptQueue, &pino, NULL);
+}
 
+
+void taskTrataISR(void *params)
+{
+	int pino;
+	int contador = 0;
+
+	while(true)
+
+//De-Bouncing
+	if(xQueueReceive(interruptQueue, &pino, portMAX_DELAY))
+	    {
+	      // De-bouncing
+	      int estado = gpio_get_level(pino);
+	      if(estado == 1)
+	      {
+	        gpio_isr_handler_remove(pino);
+	        while(gpio_get_level(pino) == estado)
+	        {
+	          vTaskDelay(50 / portTICK_PERIOD_MS);
+	        }
+	        // Habilitar novamente a interrupção
+	        vTaskDelay(50 / portTICK_PERIOD_MS);
+	        gpio_isr_handler_add(pino, gpio_isr_handler, (void *) pino);
+	      }
+	    }
 }
